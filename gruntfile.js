@@ -3,8 +3,9 @@ module.exports = function (grunt) {
 		pkg:grunt.file.readJSON('package.json'),
 		uglify: {
 			build: {
-			  src: 'public_html/bundle.js',
-			  dest: 'public_html/bundle.min.js'
+			  src: 'public_html/require.js',
+			  dest: 'public_html/require.min.js',
+			  sourceMap: true
 			}
 		},
 		clean:['public_html/*'],
@@ -14,7 +15,16 @@ module.exports = function (grunt) {
 			}
 		},
 		browserify: {
-			'public_html/require.js': ['files/jquery.autoinput.js']
+			options: {
+				browserifyOptions: {
+					debug: true
+				},
+			},
+			build: {
+				files: {
+					'public_html/require.js': ['files/jquery.autoinput.js', 'files/main.js']
+				},
+			}
 		}
 		/*requirejs: {
 			build: {
@@ -41,6 +51,7 @@ module.exports = function (grunt) {
 	//grunt.loadNpmTasks('grunt-contrib-requirejs');
 	grunt.registerTask('build', [
 		'copy',
-		'browserify'
+		'browserify',
+		'uglify'
 	]);
 };
