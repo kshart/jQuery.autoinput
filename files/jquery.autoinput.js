@@ -1,8 +1,34 @@
 
 import {AutoInput} from "./AutoInput"
 
+	/*
+	 * clientLimitViewCount: 0
+	 * clientAutoUpdateTimeoutMS: 1000
+	 * clientViewData(DOMElement, data:[{}, {}])
+	 * clientLimitUpdate(DOMElement, limit:{page, pageCount, itemsOnPage})
+	 * 
+	 * serverType 'local'|'remote'
+	 * localRequest(data, limit:{page, pageCount, itemsOnPage}|undefined)
+	 * 
+	 * serverURL: url
+	 * serverMethod: 'GET'|'POST'
+	 * serverTimeoutMS: 100000
+	 * serverSendArgType true|false
+	 * serverCacheActive: true:false
+	 * serverOnEndLoad()
+	 * serverOnStartLoad()
+	 * serverOnProgressLoad(e)
+	 * serverOnError()
+	 * 
+	 * autoUpdate true|false
+	 * 
+	 * $.fn.AutoInput('trigger', 'limit.prev'|'limit.next'|'limit.go', page)
+	 * 
+	 * 
+	 * 
+	 */
+	
 (function (factory) {
-	"use strict";
 	if (typeof define==='function' && define.amd) {
 		define(['jquery'], factory);
 	}else if (typeof exports==='object' && typeof require==='function') {
