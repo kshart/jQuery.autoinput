@@ -18,118 +18,120 @@
 		cacheActive:false
 	};
 	
-	function AutoInput (el, options) {
-		var val = $.extend({}, _defaults, options),
-			that = this;
-			
-		that.el = el;
-		that.element = el[0];
-		that.beforeUpdateTimerID = undefined;
-		that.lastRequest;
-		that.clientLimit = {
-			pageCount:0,
-			page:1,
-			itemsOnPage:0
-		};
-		if (typeof val.clientViewData==="function") that.clientViewData = val.clientViewData;
-		if (typeof val.clientLimitUpdate==="function") that.clientLimitUpdate = val.clientLimitUpdate;
-		if (val.serverType==="local") {
-			that.localRequest = val.localRequest;
-		}else if (val.serverType==="remote"){
-			that.cacheActive = val.cacheActive===true?true:false;
-			that.server = {
-				url:val.serverURL,
-				method:val.serverMethod,
-				sendArgType:val.serverSendArgType,
-				cache:true,
-				xhr:new XMLHttpRequest()
+	class AutoInput {
+		constructor(el, options) {
+			this.el = el;
+			this.element = el[0];
+			this.beforeUpdateTimerID = undefined;
+			this.lastRequest;
+			this.clientLimit = {
+				pageCount:1,
+				page:1,
+				itemsOnPage:(typeof val.clientLimitViewCount==="number") ? val.clientLimitViewCount : 0
 			};
-			that.server.xhr.timeout = 10000;
 			
+			var val = $.extend({}, _defaults, options),
+				that = this,
+				noop = function(){};
 			
-			if (typeof val.serverOnEndLoad==="function") {
-				that.server.xhr.onload = function(e) {
-					val.serverOnEndLoad();
-					that.serverLoadedItems();
-				};
-			}else{
-				that.server.xhr.onload = function(e) {
-					that.serverLoadedItems();
-				};
-			}
+			this.clientAutoUpdateTimeoutMS = (typeof val.clientAutoUpdateTimeoutMS==="number") ? val.clientAutoUpdateTimeoutMS : 1000;
+			this.clientViewData = typeof val.clientViewData==="function" ? val.clientViewData : noop;
+			this.clientLimitUpdate = typeof val.clientLimitUpdate==="function" ? val.clientLimitUpdate : noop;
 			
-			if (typeof val.serverOnStartLoad==="function") {
-				that.server.xhr.onloadstart = function(e) {
-					val.serverOnStartLoad();
+			if (val.serverType==="local") {
+				this.localRequest = val.localRequest;
+			}else if (val.serverType==="remote") {
+				this.cacheActive = val.cacheActive===true?true:false;
+				this.server = {
+					url:val.serverURL,
+					method:val.serverMethod,
+					sendArgType:val.serverSendArgType,
+					cache:true,
+					xhr:new XMLHttpRequest()
 				};
-			}
-			if (typeof val.serverOnProgressLoad==="function") {
-				that.server.xhr.onprogress = function(e) {
-					val.serverOnProgressLoad(e);
-				};
-			}
-			if (typeof val.serverOnError==="function") {
-				that.server.xhr.ontimeout = that.server.xhr.onabort = that.server.xhr.onerror = function(e) {
-					val.serverOnError();
-				};
-			}
-		}
-		if (val.autoUpdate===true) {
-			if (typeof val.clientAutoUpdateTimeoutMS==="number") that.clientAutoUpdateTimeoutMS = val.clientAutoUpdateTimeoutMS;
-			$("[data-ai-name]", this.el).each(function(i, el) {
-				var tag = el.tag,
-					type = el.getAttribute("data-ai-type"),
-					bUpdate = function(){that.beforeUpdate();};
-				switch(type) {
-					case "text":
-						if ("onpropertychange" in el) {
-							el.onkeyup = el.oninput = bUpdate;
-							el.onpropertychange = function(event) {
-								if (event.propertyName==="value") bUpdate();
-							};
-							el.oncut = function() {
-								setTimeout(bUpdate, 0);
-							};
-						}else{
-							el.addEventListener("input", bUpdate);
-						}
-						return;
-					case "radio":
-					case "checkbox":
-						el.addEventListener("change", bUpdate);
-						return;
+				this.server.xhr.timeout = 10000;
+
+				if (typeof val.serverOnEndLoad==="function") {
+					this.server.xhr.onload = function(e) {
+						val.serverOnEndLoad();
+						that.serverLoadedItems();
+					};
+				}else{
+					this.server.xhr.onload = function(e) {
+						that.serverLoadedItems();
+					};
 				}
+
+				if (typeof val.serverOnStartLoad==="function") {
+					this.server.xhr.onloadstart = function(e) {
+						val.serverOnStartLoad();
+					};
+				}
+				if (typeof val.serverOnProgressLoad==="function") {
+					this.server.xhr.onprogress = function(e) {
+						val.serverOnProgressLoad(e);
+					};
+				}
+				if (typeof val.serverOnError==="function") {
+					this.server.xhr.ontimeout = this.server.xhr.onabort = this.server.xhr.onerror = function(e) {
+						val.serverOnError();
+					};
+				}
+			}
+			
+			if (val.autoUpdate) {
+				if (typeof val.clientAutoUpdateTimeoutMS==="number") this.clientAutoUpdateTimeoutMS = val.clientAutoUpdateTimeoutMS;
+				$("[data-ai-name]", this.el).each(function(i, el) {
+					var tag = el.tag,
+						type = el.getAttribute("data-ai-type"),
+						bUpdate = function(){that.beforeUpdate();};
+					switch(type) {
+						case "text":
+							if ("onpropertychange" in el) {
+								el.onkeyup = el.oninput = bUpdate;
+								el.onpropertychange = function(event) {
+									if (event.propertyName==="value") bUpdate();
+								};
+								el.oncut = function() {
+									setTimeout(bUpdate, 0);
+								};
+							}else{
+								el.addEventListener("input", bUpdate);
+							}
+							return;
+						case "radio":
+						case "checkbox":
+							el.addEventListener("change", bUpdate);
+							return;
+					}
+				});
+			}
+			
+			
+			$("[data-ai-update]", el).each(function(i, element){
+				element.addEventListener("click", function(){that.update();});
 			});
 		}
-		if (typeof val.clientLimitViewCount==="number") this.clientLimit.itemsOnPage = val.clientLimitViewCount;
-		$("[data-ai-update]", el).each(function(i, element){
-			element.addEventListener("click", function(){that.update();});
-		});
-	}
-	
-	
-	AutoInput.prototype = {
-		clientAutoUpdateTimeoutMS:1000,
-		clientLimitUpdate:function(el, limit) {
+		clientLimitUpdate(el, limit) {
 			var that = this;
 			$("[data-ai-limit-page]", el).text(limit.page);
 			$("[data-ai-limit-page-count]", el).text(limit.pageCount);
 			$("[data-ai-limit-prev]", el).on("click", function() {that.clientLimitPrevPage();});
 			$("[data-ai-limit-next]", el).on("click", function() {that.clientLimitNextPage();});
-		},
-		clientLimitPrevPage:function() {
+		}
+		clientLimitPrevPage() {
 			if (this.lastRequest===undefined||
 				this.clientLimit.page===1) return;
 			--this.clientLimit.page;
 			this.sendRequest(this.lastRequest);
-		},
-		clientLimitNextPage:function() {
+		}
+		clientLimitNextPage() {
 			if (this.lastRequest===undefined||
 				this.clientLimit.page===this.clientLimit.pageCount) return;
 			++this.clientLimit.page;
 			this.sendRequest(this.lastRequest);
-		},
-		clientLimitGoPage:function(page) {
+		}
+		clientLimitGoPage(page) {
 			if (typeof page!=="number"||this.lastRequest===undefined) return;
 			page = Math.ceil(page);
 			if (this.clientLimit.page===page) return;
@@ -141,15 +143,15 @@
 				this.clientLimit.page = this.clientLimit.pageCount;
 			}
 			this.sendRequest(this.lastRequest);
-		},
+		}
 		
-		beforeUpdate:function() {
+		beforeUpdate() {
 			if (this.beforeUpdateTimerID===undefined) {
 				var that = this;
 				this.beforeUpdateTimerID = setTimeout(function(){that.update();}, that.clientAutoUpdateTimeoutMS);
 			}
-		},
-		update:function() {
+		}
+		update() {
 			this.beforeUpdateTimerID = undefined;
 			var request = {};
 			$("[data-ai-name]", this.el).each(function(i, el) {
@@ -169,9 +171,9 @@
 			this.clientLimit.pageCount = 1;
 			this.lastRequest = request;
 			this.sendRequest(request);
-		},
+		}
 		
-		sendRequest:function(request) {
+		sendRequest(request) {
 			if (this.server===undefined) {
 				var limit;
 				if (this.clientLimit.itemsOnPage!==0) limit = {
@@ -281,8 +283,8 @@
 				}
 				
 			}
-		},
-		serverLoadedItems:function() {
+		}
+		serverLoadedItems() {
 			var response;
 			switch (this.server.xhr.responseType) {
 				case "json":
@@ -341,7 +343,7 @@
 				sessionStorage.setItem("ai:"+this.server.url+requestStr, JSON.stringify(response.items));
 			}
 		}
-	};
+	}
 	
 	$.fn.AutoInput = function (obj, arg1, arg2) {
 		var key = "autoinput", 
