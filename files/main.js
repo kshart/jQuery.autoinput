@@ -9,10 +9,6 @@
     }
 }(function($, undefined) {
 	$("#autoinput").AutoInput({
-		/*serverURL:"/search",
-				serverRequestCreate:function(e) {
-					
-				},*/
 		localRequest:function(e, limit) {
 			var arr = [{value:1, tag:"isRed"}, {value:2, tag:"isBlue"}, {value:3, tag:"isGreen isBlue"}], result = [];
 			if (limit===undefined) {
@@ -37,11 +33,27 @@
 			}
 			
 		},
-		serverType:"local",
+		serverType:"remote",
+		serverURL:"http://localhost:8383/file",
+		serverMethod:"GET",
+		serverSendArgType:false,
+		serverOnStartLoad:function() {
+			console.log("serverOnStartLoad");
+		},
+		serverOnEndLoad:function() {
+			console.log("serverOnEndLoad");
+		},
+		serverOnProgressLoad:function(e) {
+			console.log("serverOnProgressLoad", e);
+		},
+		serverOnError:function() {
+			console.log("serverOnError");
+		},
 		clientLimitViewCount:1,
 		clientAutoUpdate:true,
 		clientAutoUpdateTimeoutMS:1000,
 		clientViewData:function(el, data) {
+			console.log("clientViewData", data);
 			var arr = [];
 			for(var i in data) {
 				arr.push(data[i].value);

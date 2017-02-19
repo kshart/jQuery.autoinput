@@ -16,9 +16,8 @@ module.exports = function (grunt) {
 		},
 		browserify: {
 			options: {
-				browserifyOptions: {
-					debug: true
-				},
+				browserifyOptions: {debug: true},
+				transform: false ? [['babelify', {presets: ['latest']}]]:undefined
 			},
 			build: {
 				files: {
@@ -52,6 +51,6 @@ module.exports = function (grunt) {
 	grunt.registerTask('build', [
 		'copy',
 		'browserify',
-		'uglify'
+		//'uglify'
 	]);
 };
