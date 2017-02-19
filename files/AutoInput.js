@@ -1,4 +1,4 @@
-const _defaults = {
+const DEFAULTS = {
 	serverType:"remote",
 	serverURL:"",
 	serverMethod:"GET",
@@ -9,7 +9,7 @@ const _defaults = {
 
 class AutoInput {
 	constructor(el, options) {
-		var val = $.extend({}, _defaults, options),
+		var val = $.extend({}, DEFAULTS, options),
 			that = this,
 			noop = function(){};
 		
@@ -25,7 +25,7 @@ class AutoInput {
 		};
 		this.clientAutoUpdateTimeoutMS = (typeof val.clientAutoUpdateTimeoutMS==="number") ? val.clientAutoUpdateTimeoutMS : 1000;
 		this.clientViewData = typeof val.clientViewData==="function" ? val.clientViewData : noop;
-		this.clientLimitUpdate = typeof val.clientLimitUpdate==="function" ? val.clientLimitUpdate : noop;
+		if (typeof val.clientLimitUpdate==="function") this.clientLimitUpdate = val.clientLimitUpdate;
 		
 		
 		if (val.serverType==="local") {
@@ -35,10 +35,10 @@ class AutoInput {
 				url:val.serverURL,
 				method:val.serverMethod,
 				sendArgType:val.serverSendArgType,
-				cache:val.cacheActive===true ? true : false,
+				cache:val.serverCacheActive===true ? true : false,
 				xhr:new XMLHttpRequest()
 			};
-			this.server.xhr.timeout = 10000;
+			this.server.xhr.timeout = (typeof val.serverTimeoutMS==="number") ? val.serverTimeoutMS : 10000;
 
 			if (typeof val.serverOnEndLoad==="function") {
 				this.server.xhr.onload = () => {
@@ -170,90 +170,88 @@ class AutoInput {
 			if (el[0]!==undefined) {
 				this.clientViewData(el[0], result.data);
 				elLimit = $("[data-ai-limit]", this.el).first();
-				if (elLimit[0]!==undefined) this.clientLimitUpdate(elLimit[0], result.limit);
+				if (elLimit[0]!==undefined) this.clientLimitUpdate(elLimit[0], this.limit);
 			}
 			return;
 		}
 		//remote
 		this.server.xhr.abort();
+		
+		var cacheRequestStr = "ai:"+this.server.url;
+		if (this.server.cache) for(let i in request) {
+			switch (request[i].type) {
+				case "checkbox":
+					cacheRequestStr += i+request[i].type+(request[i].value===true?"1":"0");
+					break;
+				case "text":
+				case "radio":
+				default:
+					cacheRequestStr += i+request[i].type+request[i].value;
+			}
+		}
+		if (this.clientLimit.itemsOnPage!==0 && this.server.cache) {
+			cacheRequestStr += this.clientLimit.itemsOnPage+this.clientLimit.page+this.clientLimit.pageCount;
+		}
+		
+		if (this.server.cache) {
+			let cacheValue = JSON.parse(sessionStorage.getItem(cacheRequestStr));
+			if (cacheValue!==null && cacheValue!==undefined) {
+				let el = $("[data-ai-output]", this.el).first(), elLimit;
+				if (el[0]!==undefined) {
+					this.clientViewData(el[0], cacheValue);
+					elLimit = $("[data-ai-limit]", this.el).first();
+					if (elLimit[0]!==undefined) this.clientLimitUpdate(elLimit[0], this.clientLimit);
+				}
+			}
+		}
+		
 		if (this.server.method==="POST") {
 			this.server.xhr.open("POST", this.server.url);
+			var completeRequest = {};
+			
 			if (this.server.sendArgType) {
-				this.server.xhr.send(request);
-			}else{
 				let requestWithoutArgType = {};
 				for(let i in request) {
 					requestWithoutArgType[i] = {value:request.value};
 				}
-				this.server.xhr.send(requestWithoutArgType);
+				completeRequest.data = requestWithoutArgType;
+			}else{
+				completeRequest.data = request;
 			}
+			if (this.clientLimit.itemsOnPage!==0) completeRequest.limit = this.clientLimit;
+			this.server.xhr.send(JSON.stringify(completeRequest));
 		}else{//GET
-			var getStr = "?", cacheRequestStr = "ai:"+this.server.url;
+			var getStr = "?";
 			if (this.server.sendArgType) {
-					if (this.server.cache) {
-						for(let i in request) {
-							switch (request[i].type) {
-								case "checkbox":
-									cacheRequestStr += i+request[i].type+(request[i].value===true?"1":"0");
-									break;
-								case "text":
-								case "radio":
-								default:
-									cacheRequestStr += i+request[i].type+request[i].value;
-							}
+				for(let i in request) {
+					switch (request[i].type) {
+						case "checkbox":
+							getStr += encodeURIComponent(i)+"="+(request[i].value===true?"1&":"0&")+i+"type="+encodeURIComponent(request[i].type)+"&";
+							break;
+						case "text":
+						case "radio":
+						default:
 							getStr += encodeURIComponent(i)+"="+encodeURIComponent(request[i].value)+"&"+i+"type="+encodeURIComponent(request[i].type)+"&";
-						}
-					}else{
-						for(let i in request) {
-							getStr += encodeURIComponent(i)+"="+encodeURIComponent(request[i].value)+"&"+i+"type="+encodeURIComponent(request[i].type)+"&";
-						}
 					}
-				}else{
-				if (this.server.cache) {
-					for(let  i in request) {
-						switch (request[i].type) {
-							case "checkbox":
-								cacheRequestStr += i+request[i].type+(request[i].value===true?"1":"0");
-								getStr += encodeURIComponent(i)+"="+(request[i].value===true?"1":"0")+"&";
-								break;
-							case "text":
-							case "radio":
-							default:
-								getStr += encodeURIComponent(i)+"="+encodeURIComponent(request[i].value)+"&";
-								cacheRequestStr += i+request[i].type+request[i].value;
-						}
-					}
-				}else{
-					for(let i in request) {
-						switch (request[i].type) {
-							case "checkbox":
-								getStr += encodeURIComponent(i)+"="+(request[i].value===true?"1":"0")+"&";
-								break;
-							case "text":
-							case "radio":
-							default:
-								getStr += encodeURIComponent(i)+"="+encodeURIComponent(request[i].value)+"&";
-						}
+				}
+			}else{
+				for(let i in request) {
+					switch (request[i].type) {
+						case "checkbox":
+							getStr += encodeURIComponent(i)+"="+(request[i].value===true?"1":"0")+"&";
+							break;
+						case "text":
+						case "radio":
+						default:
+							getStr += encodeURIComponent(i)+"="+encodeURIComponent(request[i].value)+"&";
 					}
 				}
 			}
 			
 			if (this.clientLimit.itemsOnPage!==0) {
-				if (this.server.cache) cacheRequestStr += this.clientLimit.itemsOnPage+this.clientLimit.page+this.clientLimit.pageCount;
 				getStr += "page="+Math.ceil(this.clientLimit.page)+"&itemsonpage="+Math.ceil(this.clientLimit.itemsOnPage);
 			}else{
 				getStr = getStr.substr(0, getStr.length-1);
-			}
-			if (this.server.cache) {
-				let cacheValue = JSON.parse(sessionStorage.getItem(cacheRequestStr));
-				if (cacheValue!==null && cacheValue!==undefined) {
-					let el = $("[data-ai-output]", this.el).first(), elLimit;
-					if (el[0]!==undefined) {
-						this.clientViewData(el[0], cacheValue);
-						elLimit = $("[data-ai-limit]", this.el).first();
-						if (elLimit[0]!==undefined) this.clientLimitUpdate(elLimit[0], this.clientLimit);
-					}
-				}
 			}
 			this.server.xhr.open("GET", this.server.url+getStr);
 			this.server.xhr.send(null);
