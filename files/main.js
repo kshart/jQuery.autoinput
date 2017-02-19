@@ -22,7 +22,7 @@
 					itemsOnPage:limit.itemsOnPage,
 					pageCount:1,
 					page:1
-				}
+				};
 				if (typeof limit.page==="number") limitRet.page = limit.page;
 				if (e.color===undefined) return {data:arr};
 				for(var i in arr) {
