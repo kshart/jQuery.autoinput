@@ -41,6 +41,7 @@
 				url:val.serverURL,
 				method:val.serverMethod,
 				sendArgType:val.serverSendArgType,
+				cache:true,
 				xhr:new XMLHttpRequest()
 			};
 			that.server.xhr.timeout = 10000;
@@ -208,28 +209,72 @@
 						this.server.xhr.send(requestWithoutArgType);
 					}
 				}else{//GET
-					var getStr = "?";
+					var getStr = "?", cacheRequestStr = "ai:"+this.server.url;
 					if (this.server.sendArgType) {
-						for(var i in request) {
-							getStr += encodeURIComponent(i)+"="+encodeURIComponent(request[i].value)+"&"+i+"type="+encodeURIComponent(request[i].type)+"&";
+						if (this.server.cache) {
+							for(var i in request) {
+								switch (request[i].type) {
+									case "checkbox":
+										cacheRequestStr += i+request[i].type+(request[i].value===true?"1":"0");
+										break;
+									case "text":
+									case "radio":
+									default:
+										cacheRequestStr += i+request[i].type+request[i].value;
+								}
+								getStr += encodeURIComponent(i)+"="+encodeURIComponent(request[i].value)+"&"+i+"type="+encodeURIComponent(request[i].type)+"&";
+							}
+						}else{
+							for(var i in request) {
+								getStr += encodeURIComponent(i)+"="+encodeURIComponent(request[i].value)+"&"+i+"type="+encodeURIComponent(request[i].type)+"&";
+							}
 						}
 					}else{
-						for(var i in request) {
-							switch (request[i].type) {
-								case "checkbox":
-									getStr += encodeURIComponent(i)+"="+(request[i].value===true?"1":"0")+"&";
-									break;
-								case "text":
-								case "radio":
-								default:
-									getStr += encodeURIComponent(i)+"="+encodeURIComponent(request[i].value)+"&";
+						if (this.server.cache) {
+							for(var i in request) {
+								switch (request[i].type) {
+									case "checkbox":
+										cacheRequestStr += i+request[i].type+(request[i].value===true?"1":"0");
+										getStr += encodeURIComponent(i)+"="+(request[i].value===true?"1":"0")+"&";
+										break;
+									case "text":
+									case "radio":
+									default:
+										getStr += encodeURIComponent(i)+"="+encodeURIComponent(request[i].value)+"&";
+										cacheRequestStr += i+request[i].type+request[i].value;
+								}
+							}
+						}else{
+							for(var i in request) {
+								switch (request[i].type) {
+									case "checkbox":
+										getStr += encodeURIComponent(i)+"="+(request[i].value===true?"1":"0")+"&";
+										break;
+									case "text":
+									case "radio":
+									default:
+										getStr += encodeURIComponent(i)+"="+encodeURIComponent(request[i].value)+"&";
+								}
 							}
 						}
 					}
+					
 					if (this.clientLimit.itemsOnPage!==0) {
+						if (this.server.cache) cacheRequestStr += this.clientLimit.itemsOnPage+this.clientLimit.page+this.clientLimit.pageCount;
 						getStr += "page="+Math.ceil(this.clientLimit.page)+"&itemsonpage="+Math.ceil(this.clientLimit.itemsOnPage);
 					}else{
 						getStr = getStr.substr(0, getStr.length-1);
+					}
+					if (this.server.cache) {
+						var cacheValue = JSON.parse(sessionStorage.getItem(cacheRequestStr));
+						if (cacheValue!==null && cacheValue!==undefined) {
+							var el = $("[data-ai-output]", this.el).first(), elLimit;
+							if (el[0]!==undefined) {
+								this.clientViewData(el[0], cacheValue);
+								elLimit = $("[data-ai-limit]", this.el).first();
+								if (elLimit[0]!==undefined) this.clientLimitUpdate(elLimit[0], this.clientLimit);
+							}
+						}
 					}
 					this.server.xhr.open("GET", this.server.url+getStr);
 					this.server.xhr.send(null);
@@ -255,6 +300,10 @@
 					this.clientLimit.pageCount = Math.ceil(response.limit.pageCount);
 					this.clientLimit.page = Math.ceil(response.limit.page);
 					this.clientLimit.itemsOnPage = Math.ceil(response.limit.itemsOnPage);
+				}else{
+					this.clientLimit.pageCount = 1;
+					this.clientLimit.page = 1;
+					this.clientLimit.itemsOnPage = 0;
 				}
 			}
 			if (typeof response.items==="undefined") response.items = [];
@@ -264,7 +313,33 @@
 				elLimit = $("[data-ai-limit]", this.el).first();
 				if (elLimit[0]!==undefined) this.clientLimitUpdate(elLimit[0], this.clientLimit);
 			}
-			console.log(response);
+			if (this.server.cache) {
+				if (sessionStorage.length > 100) {
+					for(var i=0, key; i<sessionStorage.length; ++i) {
+						key = sessionStorage.key(i);
+						if (key[0]!=="a" || 
+							key[1]!=="i" || 
+							key[2]!==":") continue;
+						sessionStorage.removeItem(key);
+					}
+				}
+				var requestStr = "";
+				for(var i in this.lastRequest) {
+					switch (this.lastRequest[i].type) {
+						case "checkbox":
+							requestStr += i+this.lastRequest[i].type+(this.lastRequest[i].value===true?"1":"0");
+							break;
+						case "text":
+						case "radio":
+						default:
+							requestStr += i+this.lastRequest[i].type+this.lastRequest[i].value;
+					}
+				}
+				if (this.clientLimit.itemsOnPage > 0) {
+					requestStr += this.clientLimit.itemsOnPage+this.clientLimit.page+this.clientLimit.pageCount;
+				}
+				sessionStorage.setItem("ai:"+this.server.url+requestStr, JSON.stringify(response.items));
+			}
 		}
 	};
 	
