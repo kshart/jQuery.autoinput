@@ -20,6 +20,11 @@
 	
 	class AutoInput {
 		constructor(el, options) {
+			var val = $.extend({}, _defaults, options),
+				that = this,
+				noop = function(){};
+			
+			
 			this.el = el;
 			this.element = el[0];
 			this.beforeUpdateTimerID = undefined;
@@ -29,14 +34,10 @@
 				page:1,
 				itemsOnPage:(typeof val.clientLimitViewCount==="number") ? val.clientLimitViewCount : 0
 			};
-			
-			var val = $.extend({}, _defaults, options),
-				that = this,
-				noop = function(){};
-			
 			this.clientAutoUpdateTimeoutMS = (typeof val.clientAutoUpdateTimeoutMS==="number") ? val.clientAutoUpdateTimeoutMS : 1000;
 			this.clientViewData = typeof val.clientViewData==="function" ? val.clientViewData : noop;
 			this.clientLimitUpdate = typeof val.clientLimitUpdate==="function" ? val.clientLimitUpdate : noop;
+			
 			
 			if (val.serverType==="local") {
 				this.localRequest = val.localRequest;
