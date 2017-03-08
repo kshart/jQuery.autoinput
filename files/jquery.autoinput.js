@@ -1,5 +1,5 @@
-
-import {AutoInput} from "./AutoInput"
+import $ from 'jquery'
+import AutoInput from "./AutoInput"
 
 	/*
 	 * clientLimitViewCount: 0
@@ -25,43 +25,33 @@ import {AutoInput} from "./AutoInput"
 	 * $.fn.AutoInput('trigger', 'limit.prev'|'limit.next'|'limit.go', page)
 	 * $.fn.AutoInput('setInputValue', name, e.target.getAttribute('value'));
 	 * 
-	 * 
+	 * <div data-ai-output></div>
+	 * <div data-ai-limit></div>
 	 */
 	
-(function (factory) {
-	if (typeof define==='function' && define.amd) {
-		define(['jquery'], factory);
-	}else if (typeof exports==='object' && typeof require==='function') {
-		factory(require('jquery'));
-	}else{
-		factory(jQuery);
-	}
-}(function($, undefined) {
-	"use strict";
-	$.fn.AutoInput = function (obj, arg1, arg2) {
-		var key = "autoinput", 
-			el = this.first(),
-			instance = el.data(key);
-		if (instance===undefined) {
-			el.data(key, new AutoInput(el, obj));
-		}else if (obj==="trigger" && typeof arg1==="string") {
-			switch (arg1) {
-				case "limit.prev":
-					instance.clientLimitPrevPage();
-					break;
-				case "limit.next":
-					instance.clientLimitNextPage();
-					break;
-				case "limit.go":
-					instance.clientLimitGoPage(arg2);
-					break;
-			}
-		}else if (obj==="setInputValue" && typeof arg1==="string" && (
-				  typeof arg2==="string" ||
-				  typeof arg2==="boolean" ||
-				  typeof arg2==="number")) {
-			instance.setInputValue(arg1, arg2);
+$.fn.AutoInput = function (obj, arg1, arg2) {
+	const key = "autoinput", 
+		  el = this.first(),
+		  instance = el.data(key);
+	if (instance===undefined) {
+		el.data(key, new AutoInput(el, obj));
+	}else if (obj==="trigger" && typeof arg1==="string") {
+		switch (arg1) {
+			case "limit.prev":
+				instance.clientLimitPrevPage();
+				break;
+			case "limit.next":
+				instance.clientLimitNextPage();
+				break;
+			case "limit.go":
+				instance.clientLimitGoPage(arg2);
+				break;
 		}
-		return el;
-	};
-}));
+	}else if (obj==="setInputValue" && typeof arg1==="string" && (
+			  typeof arg2==="string" ||
+			  typeof arg2==="boolean" ||
+			  typeof arg2==="number")) {
+		instance.setInputValue(arg1, arg2);
+	}
+	return el;
+};

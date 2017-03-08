@@ -1,3 +1,5 @@
+import $ from 'jquery'
+
 const DEFAULTS = {
 	serverType:"remote",
 	serverURL:"",
@@ -6,25 +8,30 @@ const DEFAULTS = {
 	autoUpdate:true,
 	cacheActive:false
 };
+const noop = () => {};
 
 class AutoInput {
 	constructor(el, options) {
-		var val = $.extend({}, DEFAULTS, options),
-			that = this,
-			noop = function(){};
-		
+		var val = Object.assign({}, DEFAULTS, options);
 		
 		this.beforeUpdateTimerID;
 		this.lastRequest;
 		this.el = el;
 		this.element = el[0];
+		this.elInputs = $("[data-ai-name]", el);
+		this.elOutput = $("[data-ai-output]", el).first();
+		this.elLimit = $("[data-ai-limit]", el).first();
+		this.elLimitPage = $("[data-ai-limit-page]", el);
+		this.elLimitPageCount = $("[data-ai-limit-page-count]", el);
+		this.elLimitPrev = $("[data-ai-limit-prev]", el);
+		this.elLimitNext = $("[data-ai-limit-next]", el);
 		this.clientLimit = {
 			pageCount:1,
 			page:1,
 			itemsOnPage:(typeof val.clientLimitViewCount==="number") ? val.clientLimitViewCount : 0
 		};
 		this.clientAutoUpdateTimeoutMS = (typeof val.clientAutoUpdateTimeoutMS==="number") ? val.clientAutoUpdateTimeoutMS : 1000;
-		this.clientViewData = typeof val.clientViewData==="function" ? val.clientViewData : noop;
+		this.clientViewData = (typeof val.clientViewData==="function") ? val.clientViewData : noop;
 		if (typeof val.clientLimitUpdate==="function") this.clientLimitUpdate = val.clientLimitUpdate;
 		
 		
@@ -35,7 +42,7 @@ class AutoInput {
 				url:val.serverURL,
 				method:val.serverMethod,
 				sendArgType:val.serverSendArgType,
-				cache:val.serverCacheActive===true ? true : false,
+				cache:val.serverCacheActive===true,
 				xhr:new XMLHttpRequest()
 			};
 			this.server.xhr.timeout = (typeof val.serverTimeoutMS==="number") ? val.serverTimeoutMS : 10000;
@@ -104,11 +111,10 @@ class AutoInput {
 		}
 	}
 	clientLimitUpdate(el, limit) {
-		console.log('123');
-		$("[data-ai-limit-page]", el).text(limit.page);
-		$("[data-ai-limit-page-count]", el).text(limit.pageCount);
-		$("[data-ai-limit-prev]", el).on("click", () => {this.clientLimitPrevPage();});
-		$("[data-ai-limit-next]", el).on("click", () => {this.clientLimitNextPage();});
+		this.elLimitPage.text(limit.page);
+		this.elLimitPageCount.text(limit.pageCount);
+		this.elLimitPrev.on("click", () => {this.clientLimitPrevPage();});
+		this.elLimitNext.on("click", () => {this.clientLimitNextPage();});
 	}
 	clientLimitPrevPage() {
 		if (this.lastRequest===undefined||
@@ -138,15 +144,18 @@ class AutoInput {
 	
 	beforeUpdate() {
 		if (this.beforeUpdateTimerID===undefined) {
-			this.beforeUpdateTimerID = setTimeout(()=>{this.update();}, this.clientAutoUpdateTimeoutMS);
+			this.beforeUpdateTimerID = setTimeout(()=>this.update(), this.clientAutoUpdateTimeoutMS);
 		}
 	}
 	update() {
+		let request = {};
 		this.beforeUpdateTimerID = undefined;
-		var request = {};
-		$("[data-ai-name]", this.el).each(function(i, el) {
-			var name = el.getAttribute("data-ai-name"),
-				type = el.getAttribute("data-ai-type");
+		this.clientLimit.page = 1;
+		this.clientLimit.pageCount = 1;
+		
+		this.elInputs.each((i, el) => {
+			const name = el.getAttribute("data-ai-name"),
+				  type = el.getAttribute("data-ai-type");
 			if (type==="radio"&&!el.checked) return; 
 			switch(type) {
 				case "text":
@@ -157,8 +166,6 @@ class AutoInput {
 					return request[name] = {type:"checkbox", value:el.checked};
 			}
 		});
-		this.clientLimit.page = 1;
-		this.clientLimit.pageCount = 1;
 		this.lastRequest = request;
 		this.sendRequest(request);
 	}
@@ -170,8 +177,7 @@ class AutoInput {
 				itemsOnPage:this.clientLimit.itemsOnPage,
 				page:this.clientLimit.page
 			};
-			let result = this.localRequest(request, limit),
-				el = $("[data-ai-output]", this.el).first(), elLimit;
+			let result = this.localRequest(request, limit);
 			if (result.limit===undefined) {
 				this.clientLimit.page = 1;
 				this.clientLimit.pageCount = 1;
@@ -181,10 +187,9 @@ class AutoInput {
 				this.clientLimit.pageCount = result.limit.pageCount;
 				this.clientLimit.itemsOnPage = result.limit.itemsOnPage;
 			}
-			if (el[0]!==undefined) {
-				this.clientViewData(el[0], result.data);
-				elLimit = $("[data-ai-limit]", this.el).first();
-				if (elLimit[0]!==undefined) this.clientLimitUpdate(elLimit[0], this.limit);
+			if (this.elOutput[0]!==undefined) {
+				this.clientViewData(this.elOutput[0], result.data);
+				if (this.elLimit[0]!==undefined) this.clientLimitUpdate(this.elLimit[0], this.limit);
 			}
 			return;
 		}
@@ -209,13 +214,9 @@ class AutoInput {
 		
 		if (this.server.cache) {
 			let cacheValue = JSON.parse(sessionStorage.getItem(cacheRequestStr));
-			if (cacheValue!==null && cacheValue!==undefined) {
-				let el = $("[data-ai-output]", this.el).first(), elLimit;
-				if (el[0]!==undefined) {
-					this.clientViewData(el[0], cacheValue);
-					elLimit = $("[data-ai-limit]", this.el).first();
-					if (elLimit[0]!==undefined) this.clientLimitUpdate(elLimit[0], this.clientLimit);
-				}
+			if (cacheValue!==null && cacheValue!==undefined && this.elOutput[0]!==undefined) {
+				this.clientViewData(this.elOutput[0], cacheValue);
+				if (this.elLimit[0]!==undefined) this.clientLimitUpdate(this.elLimit[0], this.clientLimit);
 			}
 		}
 		
@@ -296,11 +297,9 @@ class AutoInput {
 			}
 		}
 		if (typeof response.items==="undefined") response.items = [];
-		var el = $("[data-ai-output]", this.el).first(), elLimit;
-		if (el[0]!==undefined) {
-			this.clientViewData(el[0], response.items);
-			elLimit = $("[data-ai-limit]", this.el).first();
-			if (elLimit[0]!==undefined) this.clientLimitUpdate(elLimit[0], this.clientLimit);
+		if (this.elOutput[0]!==undefined) {
+			this.clientViewData(this.elOutput[0], response.items);
+			if (this.elLimit[0]!==undefined) this.clientLimitUpdate(this.elLimit[0], this.clientLimit);
 		}
 		if (this.server.cache) {
 			if (sessionStorage.length > 100) {
@@ -332,4 +331,4 @@ class AutoInput {
 	}
 }
 
-export { AutoInput };
+export default AutoInput;

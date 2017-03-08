@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+	<head>
+		<title>TODO supply a title</title>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	</head>
+	<body>
+		<div id="autoinput">
+			<label><input name="color" data-ai-name="color" data-ai-type="radio" data-ai-value="isRed" type="radio" checked>isRed</label>
+			<label><input name="color" data-ai-name="color" data-ai-type="radio" data-ai-value="isGreen" type="radio">isGreen</label>
+			<label><input name="color" data-ai-name="color" data-ai-type="radio" data-ai-value="isBlue" type="radio">isBlye</label>
+			<input data-ai-name="superText" data-ai-type="text" type="text">
+			<label><input data-ai-name="isRect" data-ai-type="checkbox" type="checkbox">isRect</label>
+			<input data-ai-update type="button" value="Update">
+			<div data-ai-output>
+				
+			</div>
+			<div data-ai-limit>
+				<span data-ai-limit-page></span>/<span data-ai-limit-page-count></span>
+				
+				<a data-ai-limit-prev>prev</a>
+				<a data-ai-limit-next>next</a>
+			</div>
+			<a onclick="$('#autoinput').AutoInput('trigger', 'limit.prev')">prev</a>
+			<a onclick="$('#autoinput').AutoInput('trigger', 'limit.next')">next</a>
+			<a onclick="$('#autoinput').AutoInput('trigger', 'limit.go', 2)">goto 2</a>
+		</div>
+		<script src="require.js"></script>
+		<!--<script>
+			$("#autoinput").AutoInput({
+				/*serverURL:"/search",
+				serverRequestCreate:function(e) {
+					
+				},*/
+				localRequest:function(e, limit) {
+					var arr = [{value:1, tag:"isRed"}, {value:2, tag:"isBlue"}, {value:3, tag:"isGreen isBlue"}], result = [];
+					if (limit===undefined) {
+						if (e.color===undefined) return {data:arr};
+						for(var i in arr) {
+							if (arr[i].tag.indexOf(e.color.value)>=0) result.push(arr[i]);
+						}
+						return {data:result};
+					}else{
+						var limitRet = {
+							itemsOnPage:limit.itemsOnPage,
+							pageCount:1,
+							page:1
+						}
+						if (typeof limit.page==="number") limitRet.page = limit.page;
+						if (e.color===undefined) return {data:arr};
+						for(var i in arr) {
+							if (arr[i].tag.indexOf(e.color.value)>=0) result.push(arr[i]);
+						}
+						limitRet.pageCount = Math.ceil(result.length/limit.itemsOnPage);
+						return {data:result.slice((limitRet.page-1)*limit.itemsOnPage, limitRet.page*limit.itemsOnPage), limit:limitRet};
+					}
+					
+				},
+				serverType:"local",
+				clientLimitViewCount:1,
+				clientAutoUpdate:true,
+				clientAutoUpdateTimeoutMS:1000,
+				clientViewData(el, data) {
+					var arr = [];
+					for(var i in data) {
+						arr.push(data[i].value);
+					}
+					$(el).html(arr.join(", "));
+				},
+				params:{
+					color:{
+						type:"radio"
+					},
+					textinput:{
+						type:"text"
+					}
+				}
+			});
+		</script>-->
+	</body>
+</html>
