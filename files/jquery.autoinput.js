@@ -23,7 +23,7 @@ import {AutoInput} from "./AutoInput"
 	 * autoUpdate true|false
 	 * 
 	 * $.fn.AutoInput('trigger', 'limit.prev'|'limit.next'|'limit.go', page)
-	 * 
+	 * $.fn.AutoInput('setInputValue', name, e.target.getAttribute('value'));
 	 * 
 	 * 
 	 */
@@ -56,6 +56,11 @@ import {AutoInput} from "./AutoInput"
 					instance.clientLimitGoPage(arg2);
 					break;
 			}
+		}else if (obj==="setInputValue" && typeof arg1==="string" && (
+				  typeof arg2==="string" ||
+				  typeof arg2==="boolean" ||
+				  typeof arg2==="number")) {
+			instance.setInputValue(arg1, arg2);
 		}
 		return el;
 	};

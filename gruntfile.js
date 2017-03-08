@@ -17,9 +17,10 @@ module.exports = function (grunt) {
 		browserify: {
 			options: {
 				browserifyOptions: {debug: true},
-				transform: false ? [['babelify', {presets: ['latest']}]]:undefined
+				transform: true ? [['babelify', {presets: ['es2015']}]]:undefined
 			},
 			build: {
+				sourceType:'module',
 				files: {
 					'public_html/require.js': ['files/jquery.autoinput.js', 'files/main.js']
 				},

@@ -63,10 +63,10 @@ class AutoInput {
 		}
 		
 		if (val.autoUpdate) {
-			$("[data-ai-name]", this.el).each(function(i, el) {
-				var tag = el.tag,
-					type = el.getAttribute("data-ai-type"),
-					bUpdate = function(){that.beforeUpdate();};
+			$("[data-ai-name]", this.el).each((i, el) => {
+				const tag = el.tag,
+					  type = el.getAttribute("data-ai-type"),
+					  bUpdate = () => this.beforeUpdate();
 				switch(type) {
 					case "text":
 						if ("onpropertychange" in el) {
@@ -86,11 +86,25 @@ class AutoInput {
 		}
 		
 		
-		$("[data-ai-update]", el).each(function(i, element){
-			element.addEventListener("click", function(){that.update();});
+		$("[data-ai-update]", el).each((i, element) => {
+			element.addEventListener("click", () => this.update());
 		});
 	}
+	setInputValue(name, value) {
+		//name exploit?
+		const inputElement = $('[data-ai-name="'+name+'"]', this.el);
+		switch (inputElement.attr('data-ai-type')) {
+			case 'radio':
+			case 'checkbox':
+				inputElement.attr('checked', value == true);
+				return true;
+			case 'text':
+				inputElement.val(value);
+				return true;
+		}
+	}
 	clientLimitUpdate(el, limit) {
+		console.log('123');
 		$("[data-ai-limit-page]", el).text(limit.page);
 		$("[data-ai-limit-page-count]", el).text(limit.pageCount);
 		$("[data-ai-limit-prev]", el).on("click", () => {this.clientLimitPrevPage();});
